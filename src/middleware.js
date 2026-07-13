@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionToken } from './lib/auth';
 
 // Paths that don't require authentication
-const publicPaths = ['/', '/login', '/api/auth/login', '/api/migrate-data'];
+const publicPaths = ['/', '/login', '/about', '/api/auth/login', '/api/migrate-data'];
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
