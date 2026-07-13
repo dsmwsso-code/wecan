@@ -1,0 +1,217 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+model User {
+  id              Int              @id @default(autoincrement())
+  username        String           @unique
+  passwordHash    String
+  role            String           // "SUPER_ADMIN" or "ADMIN"
+  gnDivisionId    Int?
+  gnDivision      GnDivision?      @relation(fields: [gnDivisionId], references: [id])
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  registeredPersons DisabledPerson[]
+  auditLogs       AuditLog[]
+}
+
+model GnDivision {
+  id              Int              @id @default(autoincrement())
+  name            String
+  villages        Village[]
+  users           User[]
+  disabledPersons DisabledPerson[]
+}
+
+model Village {
+  id              Int              @id @default(autoincrement())
+  name            String
+  gnDivisionId    Int
+  gnDivision      GnDivision       @relation(fields: [gnDivisionId], references: [id])
+  disabledPersons DisabledPerson[]
+}
+
+model DisabilityCategory {
+  id              Int              @id @default(autoincrement())
+  name            String
+  disabledPersons DisabledPerson[]
+  disabilityTypes DisabilityType[]
+}
+
+model DisabilityType {
+  id              Int              @id @default(autoincrement())
+  name            String
+  categoryId      Int?
+  category        DisabilityCategory? @relation(fields: [categoryId], references: [id])
+  disabledPersons DisabledPerson[]
+}
+
+model MaritalStatus {
+  id              Int              @id @default(autoincrement())
+  name            String
+  disabledPersons DisabledPerson[]
+}
+
+model EducationLevel {
+  id              Int              @id @default(autoincrement())
+  name            String
+  disabledPersons DisabledPerson[]
+}
+
+model EmploymentStatus {
+  id              Int              @id @default(autoincrement())
+  name            String
+  disabledPersons DisabledPerson[]
+}
+
+model AssistanceType {
+  id              Int              @id @default(autoincrement())
+  name            String
+  personAssistances PersonAssistance[]
+}
+
+model DisabledPerson {
+  id                      Int               @id @default(autoincrement())
+  registrationNumber      String            @unique
+  nic                     String            @unique
+  profilePhotoBase64      String?
+  fullName                String
+  nameWithInitials        String?
+  gender                  String
+  dob                     DateTime
+  age                     Int
+  maritalStatusId         Int?
+  maritalStatus           MaritalStatus?    @relation(fields: [maritalStatusId], references: [id])
+  mobileNumber            String
+  altContactNumber        String?
+
+  // Address Information
+  gnDivisionId            Int
+  gnDivision              GnDivision        @relation(fields: [gnDivisionId], references: [id])
+  villageId               Int?
+  village                 Village?          @relation(fields: [villageId], references: [id])
+  address                 String
+
+  // Disability Information
+  disabilityCategoryId    Int
+  disabilityCategory      DisabilityCategory @relation(fields: [disabilityCategoryId], references: [id])
+  disabilityTypeId        Int
+  disabilityType          DisabilityType     @relation(fields: [disabilityTypeId], references: [id])
+  disabilityPercentage    Int?
+  causeOfDisability       String?
+  disabilityStartDate     DateTime?
+
+  // Education
+  educationLevelId        Int?
+  educationLevel          EducationLevel?    @relation(fields: [educationLevelId], references: [id])
+  schoolAttended          String?
+
+  // Employment
+  employmentStatusId      Int?
+  employmentStatus        EmploymentStatus?  @relation(fields: [employmentStatusId], references: [id])
+  occupation              String?
+  monthlyIncome           Float?
+
+  // Family Information
+  headOfFamily            String?
+  familyMembersCount      Int?
+  guardianName            String?
+  guardianContact         String?
+
+  // Medical Information
+  hospital                String?
+  doctor                  String?
+  medicalCertificateNumber String?
+  medicalCertificateExpiry DateTime?
+
+  // Remarks
+  notes                   String?
+  assistanceReceived      String? // Stores a JSON array of strings
+
+  // Meta
+  registeredById          Int
+  registeredBy            User              @relation(fields: [registeredById], references: [id])
+  registeredAt            DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  familyMembers           FamilyMember[]
+  equipments              EquipmentAssistance[]
+  assistances             PersonAssistance[]
+  documents               Document[]
+}
+
+model FamilyMember {
+  id               Int            @id @default(autoincrement())
+  personId         Int
+  person           DisabledPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+  fullName         String
+  dob              DateTime?
+  nic              String?
+  relationship     String
+  phoneNumber      String?
+  occupation       String?
+}
+
+model EquipmentAssistance {
+  id               Int            @id @default(autoincrement())
+  personId         Int
+  person           DisabledPerson @relation(fields: [personId], references: [id], onDelete: Cascade)
+  equipmentName    String
+  receivedYear     String?
+}
+
+model PersonAssistance {
+  id               Int              @id @default(autoincrement())
+  personId         Int
+  person           DisabledPerson   @relation(fields: [personId], references: [id])
+  assistanceTypeId Int
+  assistanceType   AssistanceType   @relation(fields: [assistanceTypeId], references: [id])
+}
+
+model Document {
+  id               Int              @id @default(autoincrement())
+  personId         Int
+  person           DisabledPerson   @relation(fields: [personId], references: [id])
+  documentType     String           // "PHOTO", "NIC", "MEDICAL_REPORT", "DISABILITY_CERTIFICATE", "OTHER"
+  fileUrl          String
+  uploadedAt       DateTime         @default(now())
+}
+
+model AuditLog {
+  id               Int              @id @default(autoincrement())
+  userId           Int?
+  user             User?            @relation(fields: [userId], references: [id])
+  action           String           // "LOGIN", "ADD", "EDIT", "DELETE", "EXPORT_PDF", etc.
+  entity           String?          // "DisabledPerson", "User", etc.
+  entityId         Int?
+  ipAddress        String?
+  timestamp        DateTime         @default(now())
+}
+
+model CommitteeMember {
+  id          Int      @id @default(autoincrement())
+  role        String
+  fullName    String
+  phoneNumber String
+  photoBase64 String?
+  orderIndex  Int      @default(0)
+}
+
+model GalleryImage {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  date        DateTime?
+  photoBase64 String
+  uploadedAt  DateTime @default(now())
+}
