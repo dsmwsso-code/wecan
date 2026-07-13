@@ -60,14 +60,14 @@ export default async function PublicDashboard() {
         />
       </div>
 
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)' }}>
-        <div>
-          <h1 style={{ color: 'var(--primary-blue)', margin: '0 0 0.5rem 0', fontSize: '1.8rem' }}>
+      <header style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)' }}>
+        <div style={{ flex: '1 1 100%', minWidth: '250px' }}>
+          <h1 style={{ color: 'var(--primary-blue)', margin: '0 0 0.5rem 0', fontSize: '1.5rem', lineHeight: '1.4' }}>
             விசேட தேவையுடையோருக்கான தரவுத்தளம் (Wecan)
           </h1>
           <p style={{ color: 'var(--text-secondary)', margin: 0 }}>பொதுப் புள்ளிவிவரங்கள்</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <Link href="/about" className="btn" style={{ border: '1px solid var(--border-color)' }}>
             எம்மைப்பற்றி (About Us)
           </Link>
