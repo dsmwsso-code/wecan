@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 import MultiSelect from '@/components/MultiSelect';
 
@@ -133,7 +133,7 @@ export default function ReportsPage() {
       p.phoneNumber || '-'
     ]);
 
-    doc.autoTable({
+    autoTable(doc, {
       head: tableHeaders,
       body: tableData,
       startY: 25,
