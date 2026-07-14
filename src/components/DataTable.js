@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 
 export default function DataTable() {
   const [data, setData] = useState([]);
@@ -28,39 +26,7 @@ export default function DataTable() {
   };
 
   const exportPDF = () => {
-    const doc = new jsPDF('landscape');
-    
-    // Government Header
-    doc.setFontSize(16);
-    doc.text('Divisional Secretariat Social Service Branch', 14, 20);
-    doc.setFontSize(12);
-    doc.text('Disabled Persons Information Management System (DPIMS)', 14, 28);
-    doc.text(`Report Generated On: ${new Date().toLocaleDateString()}`, 14, 34);
-    
-    // AutoTable
-    doc.autoTable({
-      startY: 40,
-      head: [['Reg No', 'NIC', 'Full Name', 'Gender', 'GN Division', 'Disability']],
-      body: data.map(person => [
-        person.registrationNumber,
-        person.nic,
-        person.fullName,
-        person.gender,
-        person.gnDivision?.name || 'N/A',
-        person.disabilityType?.name || 'N/A',
-      ]),
-    });
-
-    const pdfBlob = doc.output('blob');
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    
-    // Auto download
-    const link = document.createElement('a');
-    link.href = pdfUrl;
-    link.download = 'DPIMS_Report.pdf';
-    link.click();
-    
-    return pdfUrl;
+    window.print();
   };
 
   const shareWhatsApp = () => {
