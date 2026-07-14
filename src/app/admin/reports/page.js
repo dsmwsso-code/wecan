@@ -114,8 +114,29 @@ export default function ReportsPage() {
     document.body.removeChild(link);
   };
 
-  const exportToPDF = () => {
-    window.print();
+  const exportToPDF = async () => {
+    const element = document.getElementById('report-container');
+    if (!element) return;
+    
+    // Load html2pdf dynamically
+    if (!window.html2pdf) {
+      await new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.onload = resolve;
+        document.body.appendChild(script);
+      });
+    }
+    
+    const opt = {
+      margin: 10,
+      filename: `wecan_report_${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    };
+    
+    window.html2pdf().set(opt).from(element).save();
   };
 
   // Stats
@@ -219,7 +240,7 @@ export default function ReportsPage() {
       )}
 
       {/* Results Table & Export */}
-      <div className="card" style={{ overflowX: 'auto' }}>
+      <div className="card" style={{ overflowX: 'auto' }} id="report-container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0 }}>முடிவுகள் (Results)</h3>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
