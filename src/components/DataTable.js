@@ -25,8 +25,29 @@ export default function DataTable() {
     setLoading(false);
   };
 
-  const exportPDF = () => {
-    window.print();
+  const exportPDF = async () => {
+    const element = document.getElementById('table-container');
+    if (!element) return;
+    
+    // Load html2pdf dynamically
+    if (!window.html2pdf) {
+      await new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.onload = resolve;
+        document.body.appendChild(script);
+      });
+    }
+    
+    const opt = {
+      margin: 10,
+      filename: 'DPIMS_Report.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    };
+    
+    window.html2pdf().set(opt).from(element).save();
   };
 
   const shareWhatsApp = () => {
@@ -62,7 +83,7 @@ export default function DataTable() {
   };
 
   return (
-    <div className="card" style={{ marginTop: '2rem' }}>
+    <div className="card" style={{ marginTop: '2rem' }} id="table-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <input 
