@@ -83,16 +83,16 @@ export async function GET(request) {
         const assistanceORs = [];
         
         if (types.includes('financial')) {
-          assistanceORs.push({ personAssistances: { some: {} } });
+          assistanceORs.push({ assistances: { some: {} } });
         }
         if (types.includes('equipment')) {
-          assistanceORs.push({ equipmentAssistances: { some: {} } });
+          assistanceORs.push({ equipments: { some: {} } });
         }
         if (types.includes('both')) {
           assistanceORs.push({
             AND: [
-              { personAssistances: { some: {} } },
-              { equipmentAssistances: { some: {} } }
+              { assistances: { some: {} } },
+              { equipments: { some: {} } }
             ]
           });
         }
@@ -117,8 +117,8 @@ export async function GET(request) {
       include: {
         gnDivision: true,
         disabilityType: { include: { category: true } },
-        personAssistances: { include: { assistanceType: true } },
-        equipmentAssistances: true,
+        assistances: { include: { assistanceType: true } },
+        equipments: true,
       },
       orderBy: { id: 'desc' }
     });
