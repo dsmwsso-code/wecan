@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 import MultiSelect from '@/components/MultiSelect';
 
@@ -117,30 +115,7 @@ export default function ReportsPage() {
   };
 
   const exportToPDF = () => {
-    if (data.length === 0) return;
-    const doc = new jsPDF();
-    
-    doc.setFontSize(16);
-    doc.text("Wecan - Reports", 14, 15);
-    
-    const tableHeaders = [['Name', 'Gender', 'Age', 'GN Division', 'Disability Type', 'Phone']];
-    const tableData = data.map(p => [
-      p.fullName, 
-      p.gender,
-      p.age,
-      p.gnDivision?.name || '-',
-      p.disabilityType?.name || '-',
-      p.phoneNumber || '-'
-    ]);
-
-    autoTable(doc, {
-      head: tableHeaders,
-      body: tableData,
-      startY: 25,
-      styles: { font: 'helvetica' } 
-    });
-
-    doc.save(`wecan_report_${new Date().toISOString().split('T')[0]}.pdf`);
+    window.print();
   };
 
   // Stats
