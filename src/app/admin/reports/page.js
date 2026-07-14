@@ -9,6 +9,39 @@ export default function ReportsPage() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const availableColumns = [
+    { id: 'serialNo', label: 'தொடர் இல.' },
+    { id: 'fullName', label: 'பெயர்' },
+    { id: 'nic', label: 'அடையாள அட்டை இல.' },
+    { id: 'gender', label: 'பால்' },
+    { id: 'age', label: 'வயது' },
+    { id: 'gnDivision', label: 'GN பிரிவு' },
+    { id: 'village', label: 'கிராமம்' },
+    { id: 'address', label: 'முகவரி' },
+    { id: 'mobileNumber', label: 'தொலைபேசி இல.' },
+    { id: 'disabilityCategory', label: 'குறைபாட்டின் வகை (Category)' },
+    { id: 'disabilityType', label: 'குறைபாட்டின் தன்மை (Type)' },
+    { id: 'disabilityPercentage', label: 'பாதிப்பு சதவீதம்' },
+    { id: 'causeOfDisability', label: 'குறைபாட்டிற்கான காரணம்' },
+    { id: 'educationLevel', label: 'கல்வி தகுதி' },
+    { id: 'employmentStatus', label: 'தொழில் நிலை' },
+    { id: 'occupation', label: 'தொழில்' },
+    { id: 'monthlyIncome', label: 'மாத வருமானம்' },
+    { id: 'assistances', label: 'பெற்ற உதவிகள்' },
+    { id: 'equipments', label: 'உபகரணங்கள்' }
+  ];
+
+  const [selectedColumns, setSelectedColumns] = useState([
+    'serialNo', 'fullName', 'gnDivision', 'mobileNumber', 'nic', 'disabilityType', 'age'
+  ]);
+
+  const handleColumnToggle = (colId) => {
+    setSelectedColumns(prev => 
+      prev.includes(colId) ? prev.filter(c => c !== colId) : [...prev, colId]
+    );
+  };
+
   
   // Master data for filters
   const [gnDivisions, setGnDivisions] = useState([]);
@@ -84,35 +117,57 @@ export default function ReportsPage() {
     fetchReports();
   };
 
+  
   const exportToCSV = () => {
     if (data.length === 0) return;
-
-    const headers = ['பெயர்', 'பால்', 'வயது', 'கிராம சேவையாளர் பிரிவு', 'குறைபாட்டின் வகை', 'தொடர்பு எண்'];
-    const rows = data.map(p => [
-      p.fullName,
-      p.gender === 'Male' ? 'ஆண்' : p.gender === 'Female' ? 'பெண்' : 'ஏனையவை',
-      p.age,
-      p.gnDivision?.name || '-',
-      p.disabilityType?.name || '-',
-      p.phoneNumber || '-'
-    ]);
-
-    let csvContent = "\uFEFF" + headers.join(',') + "\n"; // BOM for UTF-8 Excel support
-    rows.forEach(row => {
-      // Escape commas and quotes
-      const safeRow = row.map(cell => `"${String(cell).replace(/"/g, '""')}"`);
-      csvContent += safeRow.join(',') + "\n";
+    
+    // Header row based on selected columns
+    const headers = selectedColumns.map(colId => availableColumns.find(c => c.id === colId)?.label || '');
+    
+    // Data rows
+    const rows = data.map((person, index) => {
+      return selectedColumns.map(colId => {
+        switch(colId) {
+          case 'serialNo': return index + 1;
+          case 'fullName': return person.fullName;
+          case 'nic': return person.nic;
+          case 'gender': return person.gender === 'Male' ? 'ஆண்' : person.gender === 'Female' ? 'பெண்' : 'ஏனையவை';
+          case 'age': return person.age;
+          case 'gnDivision': return person.gnDivision?.name || '-';
+          case 'village': return person.village?.name || '-';
+          case 'address': return `"${(person.address || '').replace(/"/g, '""')}"`;
+          case 'mobileNumber': return person.mobileNumber || '-';
+          case 'disabilityCategory': return person.disabilityCategory?.name || '-';
+          case 'disabilityType': return person.disabilityType?.name || '-';
+          case 'disabilityPercentage': return person.disabilityPercentage ? `${person.disabilityPercentage}%` : '-';
+          case 'causeOfDisability': return person.causeOfDisability || '-';
+          case 'educationLevel': return person.educationLevel?.name || '-';
+          case 'employmentStatus': return person.employmentStatus?.name || '-';
+          case 'occupation': return person.occupation || '-';
+          case 'monthlyIncome': return person.monthlyIncome || '-';
+          case 'assistances': 
+            const aList = person.assistances ? person.assistances.map(a => a.assistanceType?.name) : [];
+            return `"${aList.join(', ')}"`;
+          case 'equipments': 
+            const eList = person.equipments ? person.equipments.map(e => e.equipmentName) : [];
+            return `"${eList.join(', ')}"`;
+          default: return '-';
+        }
+      });
     });
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `wecan_report_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(e => e.join(','))
+    ].join('\n');
+    
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `DPIMS_Report_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
-    document.body.removeChild(link);
   };
+
 
   const exportToPDF = async () => {
     const element = document.getElementById('report-container');
@@ -133,11 +188,66 @@ export default function ReportsPage() {
       filename: `wecan_report_${new Date().toISOString().split('T')[0]}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      jsPDF: { unit: 'mm', format: selectedColumns.length > 8 ? 'a3' : 'a4', orientation: 'landscape' }
     };
     
-    window.html2pdf().set(opt).from(element).save();
+    const header = document.getElementById('pdf-header');
+    if (header) header.style.display = 'block';
+    
+    window.html2pdf().set(opt).from(element).save().then(() => {
+      if (header) header.style.display = 'none';
+    });
   };
+
+  
+  const shareWhatsApp = () => {
+    if (data.length === 0) {
+      alert('பகிர்வதற்கு எந்த விபரங்களும் இல்லை.');
+      return;
+    }
+
+    let text = '*விசேட தேவையுடையோர் விபரங்கள் (DPIMS)*\n\n';
+    
+    data.forEach((p, index) => {
+      selectedColumns.forEach(colId => {
+        const label = availableColumns.find(c => c.id === colId)?.label;
+        let value = '-';
+        switch(colId) {
+          case 'serialNo': value = index + 1; break;
+          case 'fullName': value = p.fullName; break;
+          case 'nic': value = p.nic; break;
+          case 'gender': value = p.gender === 'Male' ? 'ஆண்' : p.gender === 'Female' ? 'பெண்' : 'ஏனையவை'; break;
+          case 'age': value = p.age; break;
+          case 'gnDivision': value = p.gnDivision?.name || '-'; break;
+          case 'village': value = p.village?.name || '-'; break;
+          case 'address': value = p.address || '-'; break;
+          case 'mobileNumber': value = p.mobileNumber || '-'; break;
+          case 'disabilityCategory': value = p.disabilityCategory?.name || '-'; break;
+          case 'disabilityType': value = p.disabilityType?.name || '-'; break;
+          case 'disabilityPercentage': value = p.disabilityPercentage ? `${p.disabilityPercentage}%` : '-'; break;
+          case 'causeOfDisability': value = p.causeOfDisability || '-'; break;
+          case 'educationLevel': value = p.educationLevel?.name || '-'; break;
+          case 'employmentStatus': value = p.employmentStatus?.name || '-'; break;
+          case 'occupation': value = p.occupation || '-'; break;
+          case 'monthlyIncome': value = p.monthlyIncome || '-'; break;
+          case 'assistances': 
+            const aList = p.assistances ? p.assistances.map(a => a.assistanceType?.name) : [];
+            value = aList.join(', ') || '-'; break;
+          case 'equipments': 
+            const eList = p.equipments ? p.equipments.map(e => e.equipmentName) : [];
+            value = eList.join(', ') || '-'; break;
+        }
+        if (colId === 'serialNo') text += `*${value}. `;
+        else if (colId === 'fullName') text += `${value}*\n`;
+        else text += `${label}: ${value}\n`;
+      });
+      text += '\n';
+    });
+
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
 
   // Stats
   const total = data.length;
@@ -221,6 +331,36 @@ export default function ReportsPage() {
         </form>
       </div>
 
+      
+      {/* Column Selection */}
+      <div className="card" style={{ marginBottom: '2rem' }}>
+        <h4 style={{ margin: '0 0 1rem 0', color: 'var(--primary-blue)' }}>அறிக்கையில் இடம்பெற வேண்டிய விபரங்களைத் தெரிவு செய்க (Select Columns)</h4>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+          {availableColumns.map(col => (
+            <label key={col.id} style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem', 
+              fontSize: '0.9rem', 
+              cursor: 'pointer',
+              backgroundColor: '#f3f4f6',
+              padding: '0.5rem 0.75rem',
+              borderRadius: '6px',
+              border: selectedColumns.includes(col.id) ? '1px solid #3b82f6' : '1px solid transparent',
+              transition: 'all 0.2s ease'
+            }}>
+              <input 
+                type="checkbox" 
+                checked={selectedColumns.includes(col.id)}
+                onChange={() => handleColumnToggle(col.id)}
+                style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#3b82f6' }}
+              />
+              {col.label}
+            </label>
+          ))}
+        </div>
+      </div>
+
       {/* Summary Stats */}
       {data.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
@@ -241,14 +381,22 @@ export default function ReportsPage() {
 
       {/* Results Table & Export */}
       <div className="card" style={{ overflowX: 'auto' }} id="report-container">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem', display: 'none' }} id="pdf-header">
+          <h3>Disabled Persons Information Management System (DPIMS)</h3>
+          <p>Report Generated On: {new Date().toLocaleDateString()}</p>
+        </div>
+
+        <div data-html2canvas-ignore="true" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0 }}>முடிவுகள் (Results)</h3>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={shareWhatsApp} disabled={data.length === 0} className="btn" style={{ backgroundColor: '#16a34a', color: 'white', border: 'none' }}>
+              WhatsApp இல் பகிர்க
+            </button>
             <button onClick={exportToCSV} disabled={data.length === 0} className="btn" style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}>
               Excel (CSV)
             </button>
             <button onClick={exportToPDF} disabled={data.length === 0} className="btn" style={{ backgroundColor: '#ef4444', color: 'white', border: 'none' }}>
-              PDF (Basic)
+              PDF
             </button>
           </div>
         </div>
@@ -259,28 +407,54 @@ export default function ReportsPage() {
           <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>தேடப்பட்ட விபரங்களுக்கு அமைவாக எவ்வித தரவுகளும் காணப்படவில்லை.</p>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+            
             <thead>
               <tr style={{ backgroundColor: '#f3f4f6', textAlign: 'left' }}>
-                <th style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>பெயர்</th>
-                <th style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>பால்</th>
-                <th style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>வயது</th>
-                <th style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>GN பிரிவு</th>
-                <th style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>குறைபாட்டின் வகை</th>
-                <th style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>தொடர்பு எண்</th>
+                {selectedColumns.map(colId => (
+                  <th key={colId} style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb' }}>
+                    {availableColumns.find(c => c.id === colId)?.label}
+                  </th>
+                ))}
               </tr>
             </thead>
+
+            
             <tbody>
-              {data.map(person => (
+              {data.map((person, index) => (
                 <tr key={person.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: '0.75rem' }}>{person.fullName}</td>
-                  <td style={{ padding: '0.75rem' }}>{person.gender === 'Male' ? 'ஆண்' : person.gender === 'Female' ? 'பெண்' : 'ஏனையவை'}</td>
-                  <td style={{ padding: '0.75rem' }}>{person.age}</td>
-                  <td style={{ padding: '0.75rem' }}>{person.gnDivision?.name || '-'}</td>
-                  <td style={{ padding: '0.75rem' }}>{person.disabilityType?.name || '-'}</td>
-                  <td style={{ padding: '0.75rem' }}>{person.phoneNumber || '-'}</td>
+                  {selectedColumns.map(colId => {
+                    let value = '-';
+                    switch(colId) {
+                      case 'serialNo': value = index + 1; break;
+                      case 'fullName': value = person.fullName; break;
+                      case 'nic': value = person.nic; break;
+                      case 'gender': value = person.gender === 'Male' ? 'ஆண்' : person.gender === 'Female' ? 'பெண்' : 'ஏனையவை'; break;
+                      case 'age': value = person.age; break;
+                      case 'gnDivision': value = person.gnDivision?.name || '-'; break;
+                      case 'village': value = person.village?.name || '-'; break;
+                      case 'address': value = person.address || '-'; break;
+                      case 'mobileNumber': value = person.mobileNumber || '-'; break;
+                      case 'disabilityCategory': value = person.disabilityCategory?.name || '-'; break;
+                      case 'disabilityType': value = person.disabilityType?.name || '-'; break;
+                      case 'disabilityPercentage': value = person.disabilityPercentage ? `${person.disabilityPercentage}%` : '-'; break;
+                      case 'causeOfDisability': value = person.causeOfDisability || '-'; break;
+                      case 'educationLevel': value = person.educationLevel?.name || '-'; break;
+                      case 'employmentStatus': value = person.employmentStatus?.name || '-'; break;
+                      case 'occupation': value = person.occupation || '-'; break;
+                      case 'monthlyIncome': value = person.monthlyIncome || '-'; break;
+                      case 'assistances': 
+                        const aList = person.assistances ? person.assistances.map(a => a.assistanceType?.name) : [];
+                        value = aList.join(', ') || '-'; break;
+                      case 'equipments': 
+                        const eList = person.equipments ? person.equipments.map(e => e.equipmentName) : [];
+                        value = eList.join(', ') || '-'; break;
+                    }
+                    return <td key={colId} style={{ padding: '0.75rem' }}>{value}</td>;
+                  })}
                 </tr>
               ))}
             </tbody>
+
           </table>
         )}
       </div>
