@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import ProfileModal from './ProfileModal';
 
 export default function DataTable() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedPersonId, setSelectedPersonId] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -21,8 +23,32 @@ export default function DataTable() {
       }
     } catch (error) {
       console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('நிச்சயமாக இந்த நபரின் விபரங்களை நீக்க வேண்டுமா? இந்தச் செயலை மாற்ற முடியாது.')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/persons/${id}`, {
+        method: 'DELETE',
+      });
+      const result = await res.json();
+      
+      if (result.success) {
+        alert('வெற்றிகரமாக நீக்கப்பட்டது!');
+        fetchData(); // Refresh the table
+      } else {
+        alert(result.error || 'நீக்குவதில் பிழை ஏற்பட்டது.');
+      }
+    } catch (error) {
+      console.error('Error deleting person:', error);
+      alert('நீக்குவதில் பிழை ஏற்பட்டது.');
+    }
   };
 
   const exportPDF = async () => {
@@ -47,12 +73,31 @@ export default function DataTable() {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
     };
     
-    window.html2pdf().set(opt).from(element).save();
+    const header = document.getElementById('pdf-header');
+    if (header) header.style.display = 'block';
+    
+    window.html2pdf().set(opt).from(element).save().then(() => {
+      if (header) header.style.display = 'none';
+    });
   };
 
   const shareWhatsApp = () => {
-    // Generate the message to share
-    const text = `*DPIMS Report Summary*\nTotal Records: ${data.length}\nDate: ${new Date().toLocaleDateString()}\n\nNote: Please check the system for the full PDF report.`;
+    if (data.length === 0) {
+      alert('பகிர்வதற்கு எந்த விபரங்களும் இல்லை.');
+      return;
+    }
+
+    let text = '*விசேட தேவையுடையோர் விபரங்கள் (DPIMS)*\n\n';
+    
+    data.forEach((p, index) => {
+      text += `${index + 1}. ${p.fullName}\n`;
+      text += `NIC: ${p.nic}\n`;
+      text += `பாலினம்: ${p.gender}\n`;
+      text += `GN பிரிவு: ${p.gnDivision?.name || '-'}\n`;
+      text += `குறைபாட்டின் வகை: ${p.disabilityType?.name || '-'}\n`;
+      text += `தொலைபேசி இல.: ${p.mobileNumber || '-'}\n\n`;
+    });
+
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
@@ -84,7 +129,13 @@ export default function DataTable() {
 
   return (
     <div className="card" style={{ marginTop: '2rem' }} id="table-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+      {/* This header is visually hidden in normal view if needed, but for simplicity let's make it visible only in PDF or just a nice header for the card */}
+      <div style={{ textAlign: 'center', marginBottom: '1.5rem', display: 'none' }} id="pdf-header">
+        <h3>Disabled Persons Information Management System (DPIMS)</h3>
+        <p>Report Generated On: {new Date().toLocaleDateString()}</p>
+      </div>
+
+      <div data-html2canvas-ignore="true" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <input 
             type="text" 
@@ -110,27 +161,89 @@ export default function DataTable() {
               <th style={{ padding: '1rem 0.5rem' }}>முழுப் பெயர்</th>
               <th style={{ padding: '1rem 0.5rem' }}>பாலினம்</th>
               <th style={{ padding: '1rem 0.5rem' }}>GN பிரிவு</th>
+              <th style={{ padding: '1rem 0.5rem', textAlign: 'center' }} data-html2canvas-ignore="true">செயற்பாடு</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>தரவுகள் ஏற்றப்படுகின்றன...</td></tr>
+              <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>தரவுகள் ஏற்றப்படுகின்றன...</td></tr>
             ) : data.length === 0 ? (
-              <tr><td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>தரவுகள் ஏதும் காணப்படவில்லை</td></tr>
+              <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>தரவுகள் ஏதும் காணப்படவில்லை</td></tr>
             ) : (
               data.map((person) => (
                 <tr key={person.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '0.75rem 0.5rem' }}>{person.registrationNumber}</td>
-                  <td style={{ padding: '0.75rem 0.5rem' }}>{person.nic}</td>
-                  <td style={{ padding: '0.75rem 0.5rem' }}>{person.fullName}</td>
-                  <td style={{ padding: '0.75rem 0.5rem' }}>{person.gender}</td>
-                  <td style={{ padding: '0.75rem 0.5rem' }}>{person.gnDivision?.name || 'N/A'}</td>
+                  <td style={{ padding: '1rem 0.5rem' }}>{person.nic}</td>
+                  <td style={{ padding: '1rem 0.5rem', fontWeight: '500' }}>{person.fullName}</td>
+                  <td style={{ padding: '1rem 0.5rem' }}>
+                    <span style={{ 
+                      padding: '0.25rem 0.75rem', 
+                      backgroundColor: person.gender === 'Male' ? '#dbeafe' : '#fce7f3', 
+                      color: person.gender === 'Male' ? '#1e40af' : '#be185d', 
+                      borderRadius: '9999px',
+                      fontSize: '0.85rem'
+                    }}>
+                      {person.gender}
+                    </span>
+                  </td>
+                  <td style={{ padding: '1rem 0.5rem' }}>{person.gnDivision?.name}</td>
+                  <td style={{ padding: '1rem 0.5rem', textAlign: 'center' }} data-html2canvas-ignore="true">
+                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                      <button 
+                        onClick={() => setSelectedPersonId(person.id)}
+                        style={{
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          padding: '0.4rem 0.8rem',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        பார்வை
+                      </button>
+                      <button 
+                        onClick={() => window.location.href = `/admin/edit/${person.id}`}
+                        style={{
+                          backgroundColor: '#f59e0b',
+                          color: 'white',
+                          border: 'none',
+                          padding: '0.4rem 0.8rem',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        திருத்து
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(person.id)}
+                        style={{
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          padding: '0.4rem 0.8rem',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        அழி
+                      </button>
+                    </div>
+                  </td> 
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      <ProfileModal 
+        personId={selectedPersonId} 
+        onClose={() => setSelectedPersonId(null)} 
+      />
     </div>
   );
 }
